@@ -1,1 +1,1 @@
-fetch_test v1
+fetch_test v2

@@ -1,8 +1,6 @@
 hi
 test
-asdasd
-asdasdad
-asd
 ff
 bbb
 ggg
+lll

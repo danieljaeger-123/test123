@@ -17,7 +17,10 @@ public class ProgramB
                     var key = Console.ReadKey(true);
 
                     if (key.Key == ConsoleKey.A)
-                        GitHubHelper.Pull(); 
+                    {
+                        GitHubHelper.Pull();
+                        GitHubHelper.Push(); 
+                    }
 
                     GitHubHelper.UpdateHashToCurrent();
                 }

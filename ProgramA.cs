@@ -1,6 +1,7 @@
 ﻿
 using System.Diagnostics;
 using LibGit2Sharp;
+using LibGit2Sharp.Handlers;
 
 public class CommandHelper
 {
@@ -87,7 +88,20 @@ public class GitHubHelper
             Console.WriteLine("Conflicts detected... aborting merge. Please pull, merge the contents manually and reimport the new files.");
         else
             Console.WriteLine("Merge successfull.");
+    }
 
+    public static void Push()
+    {
+        var options = new PushOptions();
+        options.CredentialsProvider = new CredentialsHandler(
+        (url, usernameFromUrl, types) =>
+            new UsernamePasswordCredentials()
+            {
+                Username = "danieljaeger-123",
+                Password = "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"
+            });
+            
+        repository.Network.Push(remote, branchName, options); 
     }
 
     public static void Lock()

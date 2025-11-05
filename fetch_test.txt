@@ -1,8 +1,1 @@
-new line (but different)
-fetch_test v9
-
-c
-v
-f
-a
-asdasdas
+new line

@@ -3,7 +3,7 @@ public class ProgramB
     private bool exit;
     public ProgramB()
     {
-        GitHubHelper.InitializeGit("test123", "fetch_test.txt", "origin", "refs/remotes/origin/main");
+        GitHubHelper.InitializeGit("../litma_github_test", "fetch_test.txt", "origin", "refs/remotes/origin/main");
 
         Task t = new Task(async () =>
         {

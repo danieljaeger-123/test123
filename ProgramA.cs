@@ -81,7 +81,7 @@ public class GitHubHelper
 
     public static void Pull()
     {
-        var mergeResult = Commands.Pull(repository, new Signature(new Identity("a", "b"), DateTime.Now), new() { MergeOptions = new() { FailOnConflict = true } });
+        var mergeResult = Commands.Pull(repository, new Signature(new Identity("a", "b"), DateTime.Now), new() { MergeOptions = new() { MergeFileFavor = MergeFileFavor.Union, FailOnConflict = true } });
 
         if (mergeResult.Status == MergeStatus.Conflicts)
             Console.WriteLine("Conflicts detected... aborting merge. Please pull, merge the contents manually and reimport the new files.");
@@ -103,7 +103,6 @@ public class GitHubHelper
 
 public class ProgramA
 {
-    private bool exit;
     public ProgramA()
     {
         GitHubHelper.InitializeGit("test123", "fetch_test.txt", "origin", "refs/remotes/origin/main");

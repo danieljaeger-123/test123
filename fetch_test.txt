@@ -1,2 +1,2 @@
 fetch_test v7
-fetch_test new v1
+fetch_test new v2

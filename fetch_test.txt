@@ -1,6 +1,6 @@
-fetch_test v7
-fetch_test new v1
-fetch_test newer v1
+fetch_test v6
+fetch_test new v0
+fetch_test newer v0
 new line (but different)
 c
 v

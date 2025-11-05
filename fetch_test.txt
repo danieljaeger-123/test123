@@ -1,10 +1,5 @@
 fetch_test v9
-fetch_test new v3
-fetch_test newer v3
-fetch_test v6
-fetch_test new v0
-fetch_test newer v1
-new line (but different)
+
 c
 v
 f

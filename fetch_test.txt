@@ -1,2 +1,6 @@
+new changedasd
+new insertsasd
+cd
+new change
 g
 d

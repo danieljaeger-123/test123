@@ -137,22 +137,21 @@ public class GitHubHelper
             return [];
         }
 
-        var localFile = (Blob)localHead.Tree.First(x => x.Path == targetFilePath).Target;
-        var remoteFile = (Blob)remoteHead.Tree.First(x => x.Path == targetFilePath).Target;
-        var baseFile = (Blob)mergeBase.Tree.First(x => x.Path == targetFilePath).Target;
+        var localChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, localHead.Tree);
+        var remoteChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, remoteHead.Tree);
 
-        var localChanges = repository.Diff.Compare(baseFile, localFile);
-        var remoteChanges = repository.Diff.Compare(baseFile, remoteFile);
+        var localFileChanges = localChanges[targetFilePath];
+        var remoteFileChanges = remoteChanges[targetFilePath];
 
-        var localLines = localChanges.AddedLines.Concat(localChanges.DeletedLines);
-        var remoteLines = remoteChanges.AddedLines.Concat(remoteChanges.DeletedLines);
+        var localLines = localFileChanges.AddedLines.Concat(localFileChanges.DeletedLines);
+        var remoteLines = remoteFileChanges.AddedLines.Concat(remoteFileChanges.DeletedLines);
 
         var conflictingLines = localLines.Intersect(remoteLines, new LineEqualityComparer());
 
         List<LineChange[]> output = conflictingLines.Select(x => new LineChange[]
         {
-            new LineChange() { Line = localLines.First(y => y.LineNumber == x.LineNumber), Change = GetChangeType(localLines.First(y => y.LineNumber == x.LineNumber), localChanges.AddedLines, localChanges.DeletedLines) },
-            new LineChange() { Line = remoteLines.First(y => y.LineNumber == x.LineNumber), Change = GetChangeType(remoteLines.First(y => y.LineNumber == x.LineNumber), remoteChanges.AddedLines, remoteChanges.DeletedLines) }
+            new LineChange() { Line = localLines.First(y => y.LineNumber == x.LineNumber), Change = GetChangeType(localLines.First(y => y.LineNumber == x.LineNumber), localFileChanges.AddedLines, localFileChanges.DeletedLines) },
+            new LineChange() { Line = remoteLines.First(y => y.LineNumber == x.LineNumber), Change = GetChangeType(remoteLines.First(y => y.LineNumber == x.LineNumber), remoteFileChanges.AddedLines, remoteFileChanges.DeletedLines) }
         }
         ).ToList();
 
@@ -175,7 +174,7 @@ public class GitHubHelper
                 new UsernamePasswordCredentials
                 {
                     Username = "danieljaeger-123",
-                    Password = "x"
+                    Password = "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"
                 }
         };
 

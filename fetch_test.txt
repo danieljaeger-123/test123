@@ -1,3 +1,5 @@
 new changed
 new insert
 cd
+new change
+g

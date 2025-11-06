@@ -3,3 +3,4 @@ new inserts
 cd
 new change
 g
+d

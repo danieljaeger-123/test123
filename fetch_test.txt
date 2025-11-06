@@ -2,3 +2,4 @@ new line 4 test
 new line 4
 test
 test2 - test
+mid

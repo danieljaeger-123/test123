@@ -106,9 +106,9 @@ public class GitHubHelper
 
                 builder.Append("-----------------------------\n");
                 builder.Append($"Index: {local.Line.LineNumber}\n");
-                builder.Append($"Local: {local.Change.GetIdentifer()} {local.Line.Content}"); 
-                builder.Append($"Remote: {remote.Change.GetIdentifer()} {remote.Line.Content}");
-                builder.Append("-----------------------------\n");
+                builder.Append($"Local: {local.Change.GetIdentifer()} {local.Line.Content.ReplaceLineEndings("")}\n"); 
+                builder.Append($"Remote: {remote.Change.GetIdentifer()} {remote.Line.Content.ReplaceLineEndings("")}\n");
+                builder.Append("-----------------------------\n\n");
                 
             }
 

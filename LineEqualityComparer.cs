@@ -10,6 +10,6 @@ public class LineEqualityComparer : IEqualityComparer<Line>
 
     public int GetHashCode([DisallowNull] Line obj)
     {
-        return (obj.LineNumber.GetHashCode() / Int32.MaxValue) * obj.Content.GetHashCode(); 
+        return (obj.LineNumber.GetHashCode() / Int32.MaxValue) ^ obj.Content.GetHashCode(); 
     }
 }

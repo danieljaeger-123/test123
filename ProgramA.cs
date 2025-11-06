@@ -40,7 +40,7 @@ public class CommandHelper
 public class GitHubHelper
 {
     private static Repository repository = null!;
-    public static string previousFileHash = "";
+    private static string previousFileHash = "";
     private static string targetFilePath = "";
     private static string branchName = "";
     private static Remote remote = null!;
@@ -124,7 +124,7 @@ public class GitHubHelper
 
     }
 
-    // string[0] = local, string[1] = remote
+    // [0] = local, [1] = remote
     public static List<LineChange[]> GetConflictingLines()
     {
         var localHead = repository.Head.Tip;
@@ -142,6 +142,9 @@ public class GitHubHelper
 
         var localFileChanges = localChanges[targetFilePath];
         var remoteFileChanges = remoteChanges[targetFilePath];
+
+        if (localFileChanges == null || remoteFileChanges == null)
+            return []; 
 
         var localLines = localFileChanges.AddedLines.Concat(localFileChanges.DeletedLines);
         var remoteLines = remoteFileChanges.AddedLines.Concat(remoteFileChanges.DeletedLines);
@@ -174,7 +177,7 @@ public class GitHubHelper
                 new UsernamePasswordCredentials
                 {
                     Username = "danieljaeger-123",
-                    Password = "x"
+                    Password = File.ReadLines("config.txt").First()
                 }
         };
 

@@ -174,7 +174,7 @@ public class GitHubHelper
                 new UsernamePasswordCredentials
                 {
                     Username = "danieljaeger-123",
-                    Password = "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"
+                    Password = "x"
                 }
         };
 

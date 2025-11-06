@@ -1,5 +1,2 @@
 hi
-this is older
-this is new
-this is newest
 lll

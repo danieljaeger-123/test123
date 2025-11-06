@@ -1,5 +1,4 @@
 new line 4 test
 new line 4
 test
-test1
-test2
+test2 - test

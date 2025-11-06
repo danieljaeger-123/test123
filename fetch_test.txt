@@ -1,4 +1,2 @@
-new changed
-new inserts
 g
 d

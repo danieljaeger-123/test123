@@ -1,2 +1,5 @@
 new line 4 test
 new line 4 - b
+d
+e
+f

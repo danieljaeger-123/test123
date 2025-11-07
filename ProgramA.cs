@@ -75,7 +75,7 @@ public class GitHubHelper
 
         foreach(var path in targetFilePaths)
         {
-            var remoteFile = remoteHead.Tree.First(x => x.Path == "fetch_test.txt").Target; 
+            var remoteFile = remoteHead.Tree.First(x => x.Path == path).Target; 
             previousFileHashes[path] = remoteFile.Sha;
         }
     }
@@ -100,7 +100,7 @@ public class GitHubHelper
     public static void Pull()
     {
         ReportConflicts(); 
-        
+
         var mergeResult = Commands.Pull(repository, new Signature(new Identity("a", "b"), DateTime.Now), new() { MergeOptions = new() { MergeFileFavor = MergeFileFavor.Union, FailOnConflict = true, CommitOnSuccess = true } });
 
         if (mergeResult.Status == MergeStatus.Conflicts)
@@ -121,7 +121,8 @@ public class GitHubHelper
             var conflicts = GetConflictingLines(path);
             totalConflictCount += conflicts.Count(); 
 
-            list.Add(path, conflicts);
+            if(conflicts.Count() != 0)
+                list.Add(path, conflicts);
         }
 
         if (list.Count() > 0)

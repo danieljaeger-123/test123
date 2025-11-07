@@ -2,3 +2,6 @@ Hallo
 Wie
 Gehts
 
+Mir
+Gehts
+Gut

@@ -34,8 +34,8 @@ public class CommandHelper
 public class GitHubHelper
 {
     private static Repository repository = null!;
-    private static string previousFileHash = "";
-    private static string targetFilePath = "";
+    private static string[] targetFilePaths = [];
+    private static Dictionary<string, string> previousFileHashes = new();
     private static string branchName = "";
     private static Remote remote = null!;
 
@@ -46,69 +46,59 @@ public class GitHubHelper
     }
     public static bool HasChanged()
     {
-        Fetch(); 
+        Fetch();
 
-        var localHead = repository.Head.Tip;
-        var localFile = localHead.Tree.First(x => x.Path == targetFilePath).Target;
-        var remoteHead = repository.Branches[branchName].Tip;
-        var remoteFile = remoteHead.Tree.First(x => x.Path == targetFilePath).Target;
+        foreach (var s in targetFilePaths)
+        {
+            var localHead = repository.Head.Tip;
+            var localFile = localHead.Tree.First(x => x.Path == s).Target;
+            var remoteHead = repository.Branches[branchName].Tip;
+            var remoteFile = remoteHead.Tree.First(x => x.Path == s).Target;
 
-        return previousFileHash != remoteFile.Sha && localFile.Sha != remoteFile.Sha;
+            var output = previousFileHashes[s] != remoteFile.Sha && localFile.Sha != remoteFile.Sha;
+
+            if (output)
+                return true;
+        }
+
+        return false;
     }
 
-    public static void InitializeGit(string repo, string filePath, string remoteString, string branch)
+    public static void InitializeGit(string repo, string[] filePaths, string remoteString, string branch)
     {
         repository = new Repository(repo);
-        targetFilePath = filePath;
+        targetFilePaths = filePaths;
         branchName = branch;
 
         remote = repository.Network.Remotes[remoteString];
         var remoteHead = repository.Branches[branchName].Tip;
-        var remoteFile = remoteHead.Tree.First(x => x.Path == "fetch_test.txt").Target;
 
-        previousFileHash = remoteFile.Sha;
+        foreach(var path in targetFilePaths)
+        {
+            var remoteFile = remoteHead.Tree.First(x => x.Path == "fetch_test.txt").Target; 
+            previousFileHashes[path] = remoteFile.Sha;
+        }
     }
 
     public static void UpdateHashToCurrent()
     {
-        var remoteHead = repository.Branches[branchName].Tip;
-        var remoteFile = remoteHead.Tree.First(x => x.Path == targetFilePath).Target;
-        previousFileHash = remoteFile.Sha;
+        foreach (var path in targetFilePaths)
+        {
+            var remoteHead = repository.Branches[branchName].Tip;
+            var remoteFile = remoteHead.Tree.First(x => x.Path == path).Target;
+            previousFileHashes[path] = remoteFile.Sha;
+        }
     }
 
-    public static string GetCurrentHash()
+    public static string GetCurrentHash(string pathName)
     {
         var remoteHead = repository.Branches[branchName].Tip;
-        var remoteFile = remoteHead.Tree.First(x => x.Path == targetFilePath).Target;
+        var remoteFile = remoteHead.Tree.First(x => x.Path == pathName).Target;
         return remoteFile.Sha; 
     }
 
     public static void Pull()
     {
-        var conflictingLines = GetConflictingLines();
-
-        if (conflictingLines.Count() > 0)
-        {
-            Console.WriteLine($"Found {conflictingLines.Count()} conflicting lines. By default, the line changes from both the local tree (your current working tree) and the remote tree (on the github servers) will get merged into the file. This is just a heads up.");
-
-            var builder = new StringBuilder("Conflicting Lines:\n\n");
-
-            foreach (var lines in conflictingLines)
-            {
-                var local = lines[0];
-                var remote = lines[1];
-
-                builder.Append("-----------------------------\n");
-                builder.Append($"Index: {local.Line.LineNumber}\n");
-                builder.Append($"Local: {local.Change.GetIdentifer()} {local.Line.Content.ReplaceLineEndings("")}\n"); 
-                builder.Append($"Remote: {remote.Change.GetIdentifer()} {remote.Line.Content.ReplaceLineEndings("")}\n");
-                builder.Append("-----------------------------\n\n");
-                
-            }
-
-            Console.WriteLine(builder.ToString()); 
-        }
-
         var mergeResult = Commands.Pull(repository, new Signature(new Identity("a", "b"), DateTime.Now), new() { MergeOptions = new() { MergeFileFavor = MergeFileFavor.Union, FailOnConflict = true, CommitOnSuccess = true } });
 
         if (mergeResult.Status == MergeStatus.Conflicts)
@@ -117,9 +107,49 @@ public class GitHubHelper
             Console.WriteLine("Merge successfull.");
 
     }
+    
+    public static void ReportConflicts()
+    {
+        var list = new Dictionary<string, List<LineChange[]>>();
+
+        var totalConflictCount = 0;
+
+        foreach (var path in targetFilePaths)
+        {
+            var conflicts = GetConflictingLines(path);
+            totalConflictCount += conflicts.Count(); 
+
+            list.Add(path, conflicts);
+        }
+
+        if (list.Count() > 0)
+        {
+            Console.WriteLine($"Found a total of {totalConflictCount} conflicting lines in {list.Keys.Count()} files. By default, the line changes from both the local tree (your current working tree) and the remote tree (on the github servers) will get merged into the file. This is just a heads up.");
+
+            var builder = new StringBuilder("Conflicting Lines:\n\n");
+
+            foreach (var conflictFile in list)
+            {
+                foreach (var lines in conflictFile.Value)
+                {
+                    var local = lines[0];
+                    var remote = lines[1];
+
+                    builder.Append("-----------------------------\n");
+                    builder.Append($"File: {conflictFile.Key}\n");
+                    builder.Append($"Index: {local.Line.LineNumber}\n");
+                    builder.Append($"Local: {local.Change.GetIdentifer()} {local.Line.Content.ReplaceLineEndings("")}\n");
+                    builder.Append($"Remote: {remote.Change.GetIdentifer()} {remote.Line.Content.ReplaceLineEndings("")}\n");
+                    builder.Append("-----------------------------\n\n");
+                }
+
+                Console.WriteLine(builder.ToString());   
+            }
+        }
+    }
 
     // [0] = local, [1] = remote
-    public static List<LineChange[]> GetConflictingLines()
+    public static List<LineChange[]> GetConflictingLines(string path)
     {
         var localHead = repository.Head.Tip;
         var remoteHead = repository.Branches[branchName].Tip;
@@ -134,8 +164,8 @@ public class GitHubHelper
         var localChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, localHead.Tree);
         var remoteChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, remoteHead.Tree);
 
-        var localFileChanges = localChanges[targetFilePath];
-        var remoteFileChanges = remoteChanges[targetFilePath];
+        var localFileChanges = localChanges[path];
+        var remoteFileChanges = remoteChanges[path];
 
         if (localFileChanges == null || remoteFileChanges == null)
             return []; 
@@ -204,7 +234,11 @@ public class GitHubHelper
     // TODO: make work for multiple files 
     public static void Commit()
     {
-        repository.Index.Add(targetFilePath);
+        foreach (var path in targetFilePaths)
+        {
+            repository.Index.Add(path);
+        }
+        
         repository.Index.Write();
 
         Signature author = new Signature("a", "b", DateTime.Now);
@@ -212,7 +246,7 @@ public class GitHubHelper
 
         try
         {
-            Commit commit = repository.Commit("Comitted local " + targetFilePath + " file changes", author, commiter);
+            Commit commit = repository.Commit("Comitted local " + targetFilePaths + " file changes", author, commiter);
         }
         catch (EmptyCommitException) { }
     }
@@ -232,7 +266,7 @@ public class ProgramA
 {
     public ProgramA()
     {
-        GitHubHelper.InitializeGit("test123", "fetch_test.txt", "origin", "refs/remotes/origin/main");
+        GitHubHelper.InitializeGit("test123", ["fetch_test.txt"], "origin", "refs/remotes/origin/main");
         GitHubHelper.Lock();
     }
 }

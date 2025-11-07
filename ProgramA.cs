@@ -99,6 +99,8 @@ public class GitHubHelper
 
     public static void Pull()
     {
+        ReportConflicts(); 
+        
         var mergeResult = Commands.Pull(repository, new Signature(new Identity("a", "b"), DateTime.Now), new() { MergeOptions = new() { MergeFileFavor = MergeFileFavor.Union, FailOnConflict = true, CommitOnSuccess = true } });
 
         if (mergeResult.Status == MergeStatus.Conflicts)

@@ -1,3 +1,2 @@
 new line 4 test
-new line 4
-a
+new line 4 - b

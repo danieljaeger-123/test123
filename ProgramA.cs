@@ -1,12 +1,6 @@
-﻿
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
+﻿using System.Diagnostics;
 using System.Text;
-using System.Threading.Tasks;
 using LibGit2Sharp;
-using LibGit2Sharp.Handlers;
 
 public class CommandHelper
 {

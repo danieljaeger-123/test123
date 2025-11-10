@@ -1,3 +1,5 @@
+using LibGit2Sharp;
+
 public class ProgramB
 {
     private bool exit;
@@ -18,28 +20,35 @@ public class ProgramB
 
                     if (key.Key == ConsoleKey.A)
                     {
-                        GitHubHelper.Fetch(); // fetch again to be sure we have the latest references
+                        try
+                        {
+                            GitHubHelper.Fetch(); // fetch again to be sure we have the latest references
 
-                        // technically this code has the following issue: if there are new changes since the notification, they will be ignored (when displaying changes) - the newest changes are still considered when merging, the user just won't know about them
-                        // the following code would remedy that but its ugly and i dont know if we need / want to even display the incomming changes to the user
+                            // technically this code has the following issue: if there are new changes since the notification, they will be ignored (when displaying changes) - the newest changes are still considered when merging, the user just won't know about them
+                            // the following code would remedy that but its ugly and i dont know if we need / want to even display the incomming changes to the user
 
-                        // var oldHash = GitHubHelper.previousFileHash; 
-                        // GitHubHelper.Fetch(); // fetch again to be sure we have the latest references
-                        // var newHash = GitHubHelper.GetCurrentHash(); 
+                            // var oldHash = GitHubHelper.previousFileHash; 
+                            // GitHubHelper.Fetch(); // fetch again to be sure we have the latest references
+                            // var newHash = GitHubHelper.GetCurrentHash(); 
 
-                        // if(oldHash != newHash)
-                        // {
-                        //     Console.WriteLine("New changes found since last notification, aborting... please try again.")
-                        // }
-                        GitHubHelper.Commit();  
-                        GitHubHelper.Pull();
-                        GitHubHelper.Push().GetAwaiter().GetResult(); 
+                            // if(oldHash != newHash)
+                            // {
+                            //     Console.WriteLine("New changes found since last notification, aborting... please try again.")
+                            // }
+                            GitHubHelper.Commit();
+                            GitHubHelper.Pull();
+                            GitHubHelper.Push().GetAwaiter().GetResult();
+                        }
+                        catch (UserCancelledException)
+                        {
+                            Console.WriteLine("User aborted merge.");
+                        }
                     }
 
                     GitHubHelper.UpdateHashToCurrent();
                 }
 
-                Console.WriteLine("Searching for update..."); 
+                Console.WriteLine("Searching for update...");
 
                 await Task.Delay(5000);
             }
@@ -47,11 +56,11 @@ public class ProgramB
 
         t.Start();
 
-        while(!exit)
-        { 
+        while (!exit)
+        {
             var key = Console.ReadKey(true);
 
-            if(key.Key == ConsoleKey.Escape)
+            if (key.Key == ConsoleKey.Escape)
                 exit = true;
         }
     }

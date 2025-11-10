@@ -73,9 +73,9 @@ public class GitHubHelper
         remote = repository.Network.Remotes[remoteString];
         var remoteHead = repository.Branches[branchName].Tip;
 
-        foreach(var path in targetFilePaths)
+        foreach (var path in targetFilePaths)
         {
-            var remoteFile = remoteHead.Tree.First(x => x.Path == path).Target; 
+            var remoteFile = remoteHead.Tree.First(x => x.Path == path).Target;
             previousFileHashes[path] = remoteFile.Sha;
         }
     }
@@ -94,12 +94,12 @@ public class GitHubHelper
     {
         var remoteHead = repository.Branches[branchName].Tip;
         var remoteFile = remoteHead.Tree.First(x => x.Path == pathName).Target;
-        return remoteFile.Sha; 
+        return remoteFile.Sha;
     }
 
     public static void Pull()
     {
-        ReportConflicts(); 
+        ReportConflicts();
 
         var mergeResult = Commands.Pull(repository, new Signature(new Identity("a", "b"), DateTime.Now), new() { MergeOptions = new() { MergeFileFavor = MergeFileFavor.Union, FailOnConflict = true, CommitOnSuccess = true } });
 
@@ -109,7 +109,7 @@ public class GitHubHelper
             Console.WriteLine("Merge successfull.");
 
     }
-    
+
     public static void ReportConflicts()
     {
         var list = new Dictionary<string, List<LineChange[]>>();
@@ -119,9 +119,9 @@ public class GitHubHelper
         foreach (var path in targetFilePaths)
         {
             var conflicts = GetConflictingLines(path);
-            totalConflictCount += conflicts.Count(); 
+            totalConflictCount += conflicts.Count();
 
-            if(conflicts.Count() != 0)
+            if (conflicts.Count() != 0)
                 list.Add(path, conflicts);
         }
 
@@ -146,7 +146,7 @@ public class GitHubHelper
                     builder.Append("-----------------------------\n\n");
                 }
 
-                Console.WriteLine(builder.ToString());   
+                Console.WriteLine(builder.ToString());
             }
         }
     }
@@ -154,6 +154,7 @@ public class GitHubHelper
     // [0] = local, [1] = remote
     public static List<LineChange[]> GetConflictingLines(string path)
     {
+        // setup
         var localHead = repository.Head.Tip;
         var remoteHead = repository.Branches[branchName].Tip;
         var mergeBase = repository.ObjectDatabase.FindMergeBase(localHead, remoteHead);
@@ -164,18 +165,32 @@ public class GitHubHelper
             return [];
         }
 
+        // get changes from local and remote
         var localChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, localHead.Tree);
         var remoteChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, remoteHead.Tree);
 
         var localFileChanges = localChanges[path];
         var remoteFileChanges = remoteChanges[path];
 
+        // we can return if either of them havent changed, since we dont need to merge in that case
         if (localFileChanges == null || remoteFileChanges == null)
-            return []; 
+            return [];
 
+        var notUniqueIDs = ValidateIDs(path, localFileChanges, remoteFileChanges);
+
+        Console.WriteLine("Detected multiple entries resulting in having identical id's when merged: " + string.Join("\n", notUniqueIDs));
+        Console.WriteLine("------------------------\n");
+        Console.WriteLine("Do you still want to pull and merge or do you want to ignore it and manually pull and resolve conflicts later on? (Press 'a' to accept)");
+        var key = Console.ReadKey();
+
+        if (key.Key != ConsoleKey.A)
+            throw new UserCancelledException();  
+        
+        // combine changes in order to know what ultimatley changed 
         var localLines = localFileChanges.AddedLines.Concat(localFileChanges.DeletedLines);
         var remoteLines = remoteFileChanges.AddedLines.Concat(remoteFileChanges.DeletedLines);
 
+        // checking conflicts
         var conflictingLines = localLines.Intersect(remoteLines, new LineEqualityComparer());
 
         List<LineChange[]> output = conflictingLines.Select(x => new LineChange[]
@@ -187,13 +202,31 @@ public class GitHubHelper
 
         return output;
     }
-    
+
+    public static List<string> ValidateIDs(string path, PatchEntryChanges localDiff, PatchEntryChanges remoteDiff)
+    {
+        var localHead = repository.Head.Tip;
+        var remoteHead = repository.Branches[branchName].Tip;
+
+        var localText = localHead.Tree[path].Target.Peel<Blob>().GetContentText();
+        var remoteText = remoteHead.Tree[path].Target.Peel<Blob>().GetContentText();
+
+        List<string> localLines = localText.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).ToList();
+        List<string> remoteLines = remoteText.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).ToList();
+
+        var localAddedLines = localDiff.AddedLines;
+        var remoteAddedLines = remoteDiff.AddedLines;
+
+        return Validator.ValidateTextIDs(remoteLines, localAddedLines).Concat(Validator.ValidateTextIDs(localLines, remoteAddedLines)).ToList();
+        
+    }
+
     private static Change GetChangeType(Line line, List<Line> addedLines, List<Line> deletedLines)
     {
         bool added = addedLines.Contains(line);
         bool deleted = deletedLines.Contains(line);
 
-        return added ? Change.ADDED : deleted ? Change.DELETED : Change.NONE; 
+        return added ? Change.ADDED : deleted ? Change.DELETED : Change.NONE;
     }
 
     public static async Task Push()
@@ -241,7 +274,7 @@ public class GitHubHelper
         {
             repository.Index.Add(path);
         }
-        
+
         repository.Index.Write();
 
         Signature author = new Signature("a", "b", DateTime.Now);
@@ -271,5 +304,16 @@ public class ProgramA
     {
         GitHubHelper.InitializeGit("test123", ["fetch_test.txt"], "origin", "refs/remotes/origin/main");
         GitHubHelper.Lock();
+    }
+}
+
+public class Validator
+{
+    public static List<string> ValidateTextIDs(List<string> entries, List<Line> toCheck)
+    {
+        List<string> entryIDs = entries.Select(x => x.Split(";")[0]).ToList();
+        List<string> IDsToCheck = toCheck.Select(x => x.Content.Split(";")[0]).ToList();
+
+        return entryIDs.Intersect(IDsToCheck).ToList();
     }
 }

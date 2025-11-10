@@ -36,6 +36,13 @@ public class ProgramB
                             //     Console.WriteLine("New changes found since last notification, aborting... please try again.")
                             // }
                             GitHubHelper.Commit();
+
+                            var problems = GitHubHelper.CheckForProblems();
+                            bool abort = GitHubHelper.ReportProblems(problems);
+
+                            if (abort)
+                                throw new UserCancelledException(); 
+
                             GitHubHelper.Pull();
                             GitHubHelper.Push().GetAwaiter().GetResult();
                         }

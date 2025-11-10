@@ -148,7 +148,7 @@ public class GitHubHelper
             var key = Console.ReadKey();
 
             if (key.Key != ConsoleKey.A)
-                return false;
+                return true;
         }
 
         if (conflicts.Count() > 0)
@@ -176,7 +176,7 @@ public class GitHubHelper
             }
         }
 
-        return true; 
+        return false; 
     }
 
     public static ProblemReport CheckForProblems()

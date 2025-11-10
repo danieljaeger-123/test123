@@ -184,17 +184,35 @@ public class GitHubHelper
         var conflictDictionary = new Dictionary<string, List<LineChange[]>>();
         var duplicateIDDictionary = new Dictionary<string, List<string>>();
 
-        var totalConflictCount = 0;
+        // setup
+        var localHead = repository.Head.Tip;
+        var remoteHead = repository.Branches[branchName].Tip;
+        var mergeBase = repository.ObjectDatabase.FindMergeBase(localHead, remoteHead);
+
+        if (mergeBase == null)
+        {
+            Console.WriteLine("Couldn't find merge base... aborting searching for conflicts.");
+            return new ProblemReport();
+        }
+
+        // get changes from local and remote
+        var localChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, localHead.Tree);
+        var remoteChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, remoteHead.Tree);
 
         foreach (var path in targetFilePaths)
         {
-            var conflicts = CheckForConflictingLines(path);
-            totalConflictCount += conflicts.Count();
+            var localFileChanges = localChanges[path];
+            var remoteFileChanges = remoteChanges[path];
+
+            if (localFileChanges == null || remoteFileChanges == null)
+                continue; 
+        
+            var conflicts = CheckForConflictingLines(path, localFileChanges, remoteFileChanges);
 
             if (conflicts.Count() != 0)
                 conflictDictionary.Add(path, conflicts);
 
-            var duplicateIDs = CheckForDuplicateIDs(path);
+            var duplicateIDs = CheckForDuplicateIDs(path, localFileChanges, remoteFileChanges);
 
             if (duplicateIDs.Count() != 0)
                 duplicateIDDictionary.Add(path, duplicateIDs);
@@ -204,30 +222,8 @@ public class GitHubHelper
     }
 
     // [0] = local, [1] = remote
-    public static List<LineChange[]> CheckForConflictingLines(string path)
+    public static List<LineChange[]> CheckForConflictingLines(string path, PatchEntryChanges localFileChanges, PatchEntryChanges remoteFileChanges)
     {
-        // setup
-        var localHead = repository.Head.Tip;
-        var remoteHead = repository.Branches[branchName].Tip;
-        var mergeBase = repository.ObjectDatabase.FindMergeBase(localHead, remoteHead);
-
-        if (mergeBase == null)
-        {
-            Console.WriteLine("Couldn't find merge base... aborting searching for conflicts.");
-            return [];
-        }
-
-        // get changes from local and remote
-        var localChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, localHead.Tree);
-        var remoteChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, remoteHead.Tree);
-
-        var localFileChanges = localChanges[path];
-        var remoteFileChanges = remoteChanges[path];
-
-        // we can return if either of them havent changed, since we dont need to merge in that case
-        if (localFileChanges == null || remoteFileChanges == null)
-            return [];
-
         // combine changes in order to know what ultimatley changed 
         var localLines = localFileChanges.AddedLines.Concat(localFileChanges.DeletedLines);
         var remoteLines = remoteFileChanges.AddedLines.Concat(remoteFileChanges.DeletedLines);
@@ -246,23 +242,10 @@ public class GitHubHelper
     }
 
 
-    public static List<string> CheckForDuplicateIDs(string path)
+    public static List<string> CheckForDuplicateIDs(string path, PatchEntryChanges localFileChanges, PatchEntryChanges remoteFileChanges)
     {
         var localHead = repository.Head.Tip;
         var remoteHead = repository.Branches[branchName].Tip;
-        var mergeBase = repository.ObjectDatabase.FindMergeBase(localHead, remoteHead);
-
-        if (mergeBase == null)
-        {
-            Console.WriteLine("Couldn't find merge base... aborting searching for duplicate ids.");
-            return [];
-        }
-
-        var localChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, localHead.Tree);
-        var remoteChanges = repository.Diff.Compare<Patch>(mergeBase.Tree, remoteHead.Tree);
-
-        var localFileChanges = localChanges[path];
-        var remoteFileChanges = remoteChanges[path];
 
         var localText = localHead.Tree[path].Target.Peel<Blob>().GetContentText();
         var remoteText = remoteHead.Tree[path].Target.Peel<Blob>().GetContentText();

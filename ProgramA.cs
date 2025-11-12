@@ -126,7 +126,7 @@ public class GitHubHelper
 
         if (duplicateIDs.Values.Count() >= 0)
         {
-            Console.WriteLine("Detected multiple entries having identical id's when merged: ");
+            Console.WriteLine("Detected multiple entries having identical id's when merging local and remote branches: ");
 
             foreach (var file in duplicateIDs.Keys)
             {
@@ -143,7 +143,7 @@ public class GitHubHelper
                 Console.WriteLine(builder.ToString());
             }
 
-            Console.WriteLine("Do you still want to pull and merge (press 'a'), or do you want to ignore it and manually pull and resolve conflicts later on (press literally anything else)?");
+            Console.WriteLine("Do you still want to pull, merge and resolve identical ids (press 'a'), or do you want to ignore it and manually pull and resolve duplicate ids later on (press literally anything else)?");
 
             var key = Console.ReadKey();
 
@@ -181,8 +181,8 @@ public class GitHubHelper
 
     public static ProblemReport CheckForProblems()
     {
-        var conflictDictionary = new Dictionary<string, List<LineChange[]>>();
-        var duplicateIDDictionary = new Dictionary<string, List<string>>();
+        var conflictDictionary = new Dictionary<string, IEnumerable<LineChange[]>>();
+        var duplicateIDDictionary = new Dictionary<string, IEnumerable<string>>();
 
         // setup
         var localHead = repository.Head.Tip;
@@ -253,10 +253,10 @@ public class GitHubHelper
         List<string> localLines = localText.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).ToList();
         List<string> remoteLines = remoteText.Split(["\r\n", "\r", "\n"], StringSplitOptions.None).ToList();
 
-        var localAddedLines = localFileChanges.AddedLines;
-        var remoteAddedLines = remoteFileChanges.AddedLines;
+        var localAddedLines = localFileChanges.AddedLines.Select(x => x.Content);
+        var remoteAddedLines = remoteFileChanges.AddedLines.Select(x => x.Content);
 
-        return Validator.ValidateTextIDs(remoteLines, localAddedLines).Concat(Validator.ValidateTextIDs(localLines, remoteAddedLines)).ToList();
+        return Validator.ValidateTextIDs(remoteLines, localAddedLines).Concat(Validator.ValidateTextIDs(localLines, remoteAddedLines)).Distinct().ToList();
     }
 
     private static Change GetChangeType(Line line, List<Line> addedLines, List<Line> deletedLines)
@@ -327,17 +327,17 @@ public class ProgramA
 
 public class Validator
 {
-    public static List<string> ValidateTextIDs(List<string> entries, List<Line> toCheck)
+    public static List<string> ValidateTextIDs(IEnumerable<string> entries, IEnumerable<string> toCheck)
     {
         List<string> entryIDs = entries.Select(x => x.Split(";")[0]).ToList();
-        List<string> IDsToCheck = toCheck.Select(x => x.Content.Split(";")[0]).ToList();
+        List<string> IDsToCheck = toCheck.Select(x => x.Split(";")[0]).ToList();
 
-        return entryIDs.Intersect(IDsToCheck).Distinct().ToList();
+        return entryIDs.Intersect(IDsToCheck).ToList();
     }
 }
 
 public class ProblemReport
 {
-    public Dictionary<string, List<LineChange[]>> Conflicts = new();
-    public Dictionary<string, List<string>> DuplicateIDs = new();
+    public Dictionary<string, IEnumerable<LineChange[]>> Conflicts = new();
+    public Dictionary<string, IEnumerable<string>> DuplicateIDs = new();
 }
